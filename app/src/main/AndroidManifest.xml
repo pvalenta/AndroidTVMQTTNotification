@@ -68,14 +68,24 @@
         <service
             android:name=".service.MqttForegroundService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false"
+            android:directBootAware="true" />
 
-        <!-- Auto-start on device boot -->
+        <!-- Auto-start on device boot.
+             exported="true" is required on API 26+ for the system to deliver BOOT_COMPLETED.
+             directBootAware lets us receive LOCKED_BOOT_COMPLETED before credential storage
+             is available (TV typically has no lock screen, but OEM firmware varies). -->
         <receiver
             android:name=".receiver.BootReceiver"
-            android:exported="false">
+            android:exported="true"
+            android:directBootAware="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <!-- Fires before user unlock on API 24+; safe on TV (no lock screen) -->
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <!-- Some Amlogic/Rockchip TV boxes use a quick-boot power-on action -->
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
 

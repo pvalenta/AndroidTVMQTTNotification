@@ -17,9 +17,14 @@ class BootReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+        val validActions = setOf(
+            Intent.ACTION_BOOT_COMPLETED,
+            "android.intent.action.LOCKED_BOOT_COMPLETED",
+            "android.intent.action.QUICKBOOT_POWERON",
+        )
+        if (intent.action !in validActions) return
 
-        Log.d(TAG, "Boot completed — checking autoStart setting")
+        Log.d(TAG, "Boot event '${intent.action}' — checking autoStart setting")
 
         // Use goAsync so we can launch a coroutine without ANR risk
         val pendingResult = goAsync()

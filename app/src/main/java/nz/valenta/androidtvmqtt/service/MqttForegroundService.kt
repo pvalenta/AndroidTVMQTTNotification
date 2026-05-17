@@ -1,13 +1,22 @@
 package nz.valenta.androidtvmqtt.service
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import nz.valenta.androidtvmqtt.R
@@ -18,6 +27,7 @@ import nz.valenta.androidtvmqtt.model.ReceivedMessage
 import nz.valenta.androidtvmqtt.overlay.OverlayManager
 import nz.valenta.androidtvmqtt.ui.ConfigActivity
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.json.JSONException
@@ -52,12 +62,32 @@ class MqttForegroundService : Service() {
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var messageRepo: MessageRepository
 
+    /**
+     * CONFLATED: only the latest signal matters — if multiple reconnect triggers arrive
+     * while already connecting, they coalesce into one.
+     */
+    private val reconnectTrigger = Channel<String>(Channel.CONFLATED)
+
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var screenOnReceiverRegistered = false
+
+    private val screenOnReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_SCREEN_ON) {
+                Log.d(TAG, "Screen ON — signalling early reconnect")
+                reconnectTrigger.trySend("screen_on")
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         overlayManager = OverlayManager(applicationContext)
         settingsRepo = SettingsRepository(applicationContext)
         messageRepo = MessageRepository.getInstance(applicationContext)
         createNotificationChannels()
+        registerScreenOnReceiver()
+        registerNetworkCallback()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -102,7 +132,11 @@ class MqttForegroundService : Service() {
                 val waitSec = backoffMs / 1000
                 updateNotification("Reconnecting in ${waitSec}s…")
                 broadcastStatus("Reconnecting in ${waitSec}s")
-                delay(backoffMs)
+                // Wait for backoff timeout OR an early trigger (screen-on / network available)
+                withTimeoutOrNull(backoffMs) {
+                    val reason = reconnectTrigger.receive()
+                    Log.d(TAG, "Early reconnect triggered by: $reason")
+                }
                 backoffMs = minOf(backoffMs * 2, 30_000L)
             }
         }
@@ -182,14 +216,90 @@ class MqttForegroundService : Service() {
         stopSelf()
     }
 
+    /**
+     * Called when the user swipes the app from Recents (task removed).
+     * Schedules a 1-second self-restart via AlarmManager so the service comes back
+     * even on OEM TV launchers that aggressively kill tasks.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "Task removed — scheduling service restart")
+        val restartIntent = PendingIntent.getService(
+            this, 1,
+            Intent(this, MqttForegroundService::class.java).apply { action = ACTION_START },
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val alarmManager = getSystemService(AlarmManager::class.java)
+        val triggerAt = SystemClock.elapsedRealtime() + 1_000L
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, restartIntent)
+        } else {
+            alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, restartIntent)
+        }
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         isRunning = false
         scope.cancel()
         overlayManager.cleanup()
+        unregisterNetworkCallback()
+        unregisterScreenOnReceiver()
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    // region Reconnect triggers
+
+    /**
+     * SCREEN_ON cannot be declared in the manifest (API 26+), so we register dynamically.
+     * When the TV wakes from standby the MQTT connection may have been silently dropped;
+     * this immediately short-circuits any pending backoff delay.
+     */
+    private fun registerScreenOnReceiver() {
+        val filter = IntentFilter(Intent.ACTION_SCREEN_ON)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenOnReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(screenOnReceiver, filter)
+        }
+        screenOnReceiverRegistered = true
+    }
+
+    private fun unregisterScreenOnReceiver() {
+        if (screenOnReceiverRegistered) {
+            try { unregisterReceiver(screenOnReceiver) } catch (_: Exception) {}
+            screenOnReceiverRegistered = false
+        }
+    }
+
+    /**
+     * Signals the reconnect trigger as soon as an internet-capable network becomes available,
+     * so we don't wait out the full backoff after the TV re-establishes its Wi-Fi/Ethernet link.
+     */
+    private fun registerNetworkCallback() {
+        val cm = getSystemService(ConnectivityManager::class.java)
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        val cb = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                Log.d(TAG, "Network available — signalling early reconnect")
+                reconnectTrigger.trySend("network_available")
+            }
+        }
+        cm.registerNetworkCallback(request, cb)
+        networkCallback = cb
+    }
+
+    private fun unregisterNetworkCallback() {
+        networkCallback?.let {
+            try { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } catch (_: Exception) {}
+            networkCallback = null
+        }
+    }
+
+    // endregion
 
     // region Notifications
 
