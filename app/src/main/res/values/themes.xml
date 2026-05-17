@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AndroidTVMQTT" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/tv_background</item>
+        <item name="android:textColorPrimary">@color/tv_text_primary</item>
+        <item name="android:textColorSecondary">@color/tv_text_secondary</item>
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorPrimaryDark">@color/tv_background</item>
+        <item name="colorAccent">@color/accent</item>
+        <!-- Focus highlight for D-pad navigation -->
+        <item name="android:focusedByDefault">false</item>
+    </style>
+</resources>

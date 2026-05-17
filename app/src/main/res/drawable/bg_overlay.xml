@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Semi-transparent dark background with left accent stripe for overlay notifications -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Dark backdrop -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#E6000000" />
+            <corners android:radius="0dp" />
+        </shape>
+    </item>
+    <!-- Left accent stripe -->
+    <item android:right="0dp" android:top="0dp" android:bottom="0dp"
+        android:width="6dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FF4FC3F7" />
+        </shape>
+    </item>
+</layer-list>

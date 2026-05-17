@@ -1,0 +1,27 @@
+# Local machine-specific Android SDK path — never commit
+local.properties
+
+# Build outputs
+build/
+app/build/
+.gradle/
+.kotlin/
+
+# Android Studio / IntelliJ
+*.iml
+.idea/
+*.iws
+*.ipr
+out/
+
+# Keystore files — never commit signing keys
+*.jks
+*.keystore
+keystore.properties
+
+# VS Code local config
+.vscode/
+
+# OS noise
+.DS_Store
+Thumbs.db

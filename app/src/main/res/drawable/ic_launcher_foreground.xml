@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Letter M -->
+    <path
+        android:fillColor="#FF4FC3F7"
+        android:pathData="M16,76 L16,32 L26,32 L42,56 L58,32 L68,32 L68,76 L58,76 L58,50 L42,68 L26,50 L26,76 Z" />
+    <!-- MQTT WiFi arcs (upper right) -->
+    <path
+        android:strokeColor="#FF4FC3F7"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M72,54 Q84,42 96,54" />
+    <path
+        android:strokeColor="#FF4FC3F7"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M75,60 Q84,48 93,60" />
+    <path
+        android:strokeColor="#FF4FC3F7"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M79,66 Q84,58 89,66" />
+    <!-- WiFi dot -->
+    <path
+        android:fillColor="#FF4FC3F7"
+        android:pathData="M84,68 a4,4 0 1,0 0.001,0 Z" />
+    <!-- Notification bubble -->
+    <path
+        android:fillColor="#FF4FC3F7"
+        android:pathData="M20,84 Q20,80 24,80 L72,80 Q76,80 76,84 L76,97 Q76,101 72,101 L46,101 L42,106 L38,101 L24,101 Q20,101 20,97 Z" />
+    <!-- Exclamation mark -->
+    <path
+        android:strokeColor="#FF1A1A2E"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M48,84 L48,94" />
+    <path
+        android:fillColor="#FF1A1A2E"
+        android:pathData="M48,97 a2.5,2.5 0 1,0 0.001,0 Z" />
+</vector>
