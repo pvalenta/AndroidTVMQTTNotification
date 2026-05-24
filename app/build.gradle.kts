@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "nz.valenta.androidtvmqtt"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -57,4 +57,7 @@ dependencies {
 
     // MQTT Client (Eclipse Paho)
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
+
+    // mDNS Service Discovery (jmDNS)
+    implementation("org.jmdns:jmdns:3.5.11")
 }
